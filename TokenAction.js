@@ -91,8 +91,16 @@ var tokenAction = tokenAction || (function() {
         }
         
         _.each(repeatingAttrs, function(s){
-            var level = s.get('name').split('_')[1].replace('spell-', ''),
-                apiButton = "[" + s.get('current') + "](~repeating_spell-" + level + "_" + s.get('name').split('_')[2] + "_spell)";
+            var level = s.get('name').split('_')[1].replace('spell-', '');
+	        var spellname = "repeating_spell-" + level + "_" + s.get('name').split('_')[2];
+            
+            if (getAttrByName(id, spellname + "_spellconcentration") == 1) {
+                var conc = "©"
+            } else {
+                var conc = "";
+            }
+          
+            var apiButton = "[" + s.get('current') + conc + "](~" + spellname + "_spell)";
             
             if (level === "cantrip") {
                 level = "Cantrips";
@@ -135,9 +143,9 @@ var tokenAction = tokenAction || (function() {
         });
         
         if (checkAbility[0]) {
-            checkAbility[0].set({action: "/w @{character_name} &{template:atk} {{desc=" + spellText + "}}"});
+            checkAbility[0].set({action: "/w @{character_name} &{template:npcatk} {{description=" + spellText + "}}"});
         } else {
-            createObj("ability", {name: 'Spells', action: "/w @{character_name} &{template:atk} {{desc=" + spellText + "}}", characterid: id, istokenaction: true});
+            createObj("ability", {name: 'Spells', action: "/w @{character_name} &{template:npcatk} {{description=" + spellText + "}}", characterid: id, istokenaction: true});
         }
     },
     
