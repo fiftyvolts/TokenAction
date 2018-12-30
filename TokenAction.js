@@ -1,7 +1,7 @@
 var tokenAction = tokenAction || (function() {
     'use strict';
 
-    var version = '0.2.5',
+    var version = '0.2.5-forked-0.2',
         sheetVersion = '5th Edition OGL by Roll20 2.0',
         
     checkInstall = function() {
@@ -94,13 +94,21 @@ var tokenAction = tokenAction || (function() {
             var level = s.get('name').split('_')[1].replace('spell-', '');
 	        var spellname = "repeating_spell-" + level + "_" + s.get('name').split('_')[2];
             
-            if (getAttrByName(id, spellname + "_spellconcentration") == 1) {
-                var conc = "©"
-            } else {
-                var conc = "";
+            var flags = ['concentration', 'ritual', 'comp_v', 'comp_s', 'comp_m'];
+            var flagSymbols = ['c', 'r', 'v', 's', 'm'];
+            var flagStr = " ";
+            for (var i = 0; i < flags.length; i++) {
+              var flagAttr = findObjs({
+                  _characterid: id,
+                  name: spellname + "_spell" + flags[i]
+              });
+              
+              if (flagAttr.length > 0 && flagAttr['current'] != 0) {
+                  flagStr += flagSymbols[i];
+              }
             }
           
-            var apiButton = "[" + s.get('current') + conc + "](~" + spellname + "_spell)";
+            var apiButton = "[" + s.get('current') + "*" + flagStr + "*](~" + spellname + "_spell)";
             
             if (level === "cantrip") {
                 level = "Cantrips";
@@ -139,7 +147,7 @@ var tokenAction = tokenAction || (function() {
         sk = _.keys(sb);
         
         _.each(sk, function(e){
-            spellText += "**" + e + ":**" + "\n" + sb[e].join(' | ') + "\n\n";
+            spellText += "**" + e + ":**" + "\n" + sb[e].join('\n') + "\n";
         });
         
         if (checkAbility[0]) {
@@ -213,7 +221,14 @@ var tokenAction = tokenAction || (function() {
 		        }
 		        sendChat("TokenAction", "/w " + msg.who + " Created Token Actions for " + a.get('name') + ".");
 		    });
-		}
+		} else if (msg.type === 'api' && msg.content.search(/^!spellsta\b/) !== -1 && msg.selected) {
+            char = _.uniq(getSelectedCharacters(msg.selected));
+			
+			_.each(char, function(a) {
+			    createSpell(a.id);
+			    sendChat("TokenAction", "/w " + msg.who + " Created Token Spell Action for " + a.get('name') + ".");
+            });
+        }
 		return;
 	},
 
