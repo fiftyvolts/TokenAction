@@ -1,7 +1,7 @@
 var tokenAction = tokenAction || (function() {
     'use strict';
 
-    var version = '0.2.5-forked-0.2',
+    var version = '0.2.5-forked-0.3',
         sheetVersion = '5th Edition OGL by Roll20 2.0',
         
     checkInstall = function() {
@@ -91,49 +91,53 @@ var tokenAction = tokenAction || (function() {
         }
         
         _.each(repeatingAttrs, function(s){
-            var level = s.get('name').split('_')[1].replace('spell-', '');
-	        var spellname = "repeating_spell-" + level + "_" + s.get('name').split('_')[2];
+            var nameParts = s.get('name').split('_');
+            var level = nameParts[1].replace('spell-', '');
+	        var spellname = nameParts.slice(0,3).join('_');
             
-            var flags = ['concentration', 'ritual', 'comp_v', 'comp_s', 'comp_m'];
-            var flagSymbols = ['c', 'r', 'v', 's', 'm'];
-            var flagStr = " ";
-            for (var i = 0; i < flags.length; i++) {
-              var flagAttr = findObjs({
-                  _characterid: id,
-                  name: spellname + "_spell" + flags[i]
-              });
-              
-              if (flagAttr.length > 0 && flagAttr['current'] != 0) {
-                  flagStr += flagSymbols[i];
-              }
+            var flagStr = (
+                (checkSpellFlag(id, spellname, 'spellcomp_v') ? 'v' : '\xa0') +
+                (checkSpellFlag(id, spellname, 'spellcomp_s') ? 's' : '\xa0') +
+                (checkSpellFlag(id, spellname, 'spellcomp_m') ? 'm' : '\xa0') +
+                (checkSpellFlag(id, spellname, 'spellconcentration') ? 'c' : '\xa0') +
+                (checkSpellFlag(id, spellname, 'spellritual') ? 'r' : '\xa0') +
+                (checkSpellFlag(id, spellname, 'innate') ? 'i' : '\xa0'));
+            
+            var displayName = s.get('current');
+            var displayWidth = 23 - flagStr.length - 1;
+            if (displayName.length > displayWidth) {
+                displayName = displayName.substring(0, displayWidth - 1) + "/";
             }
-          
-            var apiButton = "[" + s.get('current') + "*" + flagStr + "*](~" + spellname + "_spell)";
+            while (displayName.length < displayWidth) {
+                displayName += "\xa0";
+            }
             
+            var apiButton = "``[" + displayName + "\xa0|" + flagStr + "](~" + spellname + "_spell)``";
+            
+            var displayLevel = "?";
             if (level === "cantrip") {
-                level = "Cantrips";
+                displayLevel = "Cantrips";
             } else if (level === "1") {
-                level = "1st";
+                displayLevel = "1st";
             } else if (level === "2") {
-                level = "2nd";
+                displayLevel = "2nd";
             } else if (level === "3") {
-                level = "3rd";
+                displayLevel = "3rd";
             } else if (level === "4") {
-                level = "4th";
+                displayLevel = "4th";
             } else if (level === "5") {
-                level = "5th";
+                displayLevel = "5th";
             } else if (level === "6") {
-                level = "6th";
+                displayLevel = "6th";
             } else if (level === "7") {
-                level = "7th";
+                displayLevel = "7th";
             } else if (level === "8") {
-                level = "8th";
+                displayLevel = "8th";
             } else if (level === "9") {
-                level = "9th";
+                displayLevel = "9th";
             }
             
-            sb[level].push(apiButton);
-            sb[level].sort();
+            sb[displayLevel].push(apiButton);
         });
         
         sk = _.keys(sb);
@@ -147,7 +151,12 @@ var tokenAction = tokenAction || (function() {
         sk = _.keys(sb);
         
         _.each(sk, function(e){
-            spellText += "**" + e + ":**" + "\n" + sb[e].join('\n') + "\n";
+            var displayLevel = e;
+            while (displayLevel.length < 17) {
+               displayLevel += '-';
+            }
+            displayLevel += '+------';
+            spellText += "``" + displayLevel + "``\n" + sb[e].join('\n') + "\n";
         });
         
         if (checkAbility[0]) {
@@ -155,6 +164,10 @@ var tokenAction = tokenAction || (function() {
         } else {
             createObj("ability", {name: 'Spells', action: "/w @{character_name} &{template:npcatk} {{description=" + spellText + "}}", characterid: id, istokenaction: true});
         }
+    },
+        
+    checkSpellFlag = function(id, name, flag) {
+        return getAttrByName(id, [name, flag].join('_'), "current") != 0;
     },
     
     sortRepeating = function(name, pattern, id) {
