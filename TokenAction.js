@@ -1,7 +1,7 @@
 var tokenAction = tokenAction || (function() {
     'use strict';
 
-    var version = '0.2.5-forked-0.3',
+    var version = '0.2.5-forked-0.4',
         sheetVersion = '5th Edition OGL by Roll20 2.0',
         
     checkInstall = function() {
@@ -170,6 +170,37 @@ var tokenAction = tokenAction || (function() {
         return getAttrByName(id, [name, flag].join('_'), "current") != 0;
     },
     
+    createTraits = function(id) {
+        var checkAbility = findObjs({_type: 'ability', _characterid: id, name: 'Traits'});
+        var repeatingAttrs = filterObjs(function(o){
+                return o.get('type') === 'attribute' &&
+                    o.get('characterid') === id && 
+                    o.get('name').match(/^repeating_traits_[^_]+_name/)
+        });
+        
+        var traitText = "";
+        _.each(repeatingAttrs, function(t) {
+            var nameId = t.get('name');
+            var actionId = nameId.replace(/_name$/, '_output');
+            var name = t.get('current');
+            while (name.length < 25) {
+                name += '\xa0';
+            }
+            traitText += '``[' + name + '](~' + id + '|' + actionId + ')``\n';
+        });
+        traitText += '``------------------------``\n'
+        traitText += '``AC:[[0+@{ac}]] PB:+[[0+@{pb}]] Sp:[[0+@{speed}]]``\n';
+        traitText += '``Pr:[[10+@{perception_bonus}]] Is:[[10+@{insight_bonus}]] Iv:[[10+@{investigation_bonus}]]``\n';
+        
+        if (checkAbility[0]) {
+            checkAbility[0].set({action: "/w @{character_name} &{template:npcatk} {{description=" + traitText + "}}"});
+        } else {
+            createObj("ability", {name: 'Traits', 
+                                  action: "/w @{character_name} &{template:npcatk} {{description=" + traitText + "}}",
+                                  characterid: id,
+                                  istokenaction: true});
+        }
+    },
     sortRepeating = function(name, pattern, id) {
         var repeatingAttrs = filterObjs(function(o){
             return o.get('type')==='attribute' && o.get('characterid') === id && o.get('name').match(name);
@@ -212,6 +243,7 @@ var tokenAction = tokenAction || (function() {
 			        createAbility('Save', "@{selected|wtype}&{template:simple} @{selected|rtype}?{Save|Strength, +@{selected|strength_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Strength Save&" + "#125;&" + "#125 {{mod=@{selected|strength_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|strength_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; |Dexterity, +@{selected|dexterity_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Dexterity Save&" + "#125;&" + "#125 {{mod=@{selected|dexterity_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|dexterity_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; |Constitution, +@{selected|constitution_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Constitution Save&" + "#125;&" + "#125 {{mod=@{selected|constitution_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|constitution_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; |Intelligence, +@{selected|intelligence_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Intelligence Save&" + "#125;&" + "#125 {{mod=@{selected|intelligence_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|intelligence_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; |Wisdom, +@{selected|wisdom_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Wisdom Save&" + "#125;&" + "#125 {{mod=@{selected|wisdom_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|wisdom_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; |Charisma, +@{selected|charisma_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125; {{rname=Charisma Save&" + "#125;&" + "#125 {{mod=@{selected|charisma_save_bonus}&" + "#125;&" + "#125; {{r1=[[@{selected|d20}+@{selected|charisma_save_bonus}@{selected|pbd_safe}]]&" + "#125;&" + "#125;}@{selected|global_save_mod}@{selected|charname_output}", a.id);
 			        createRepeating(/repeating_attack_[^_]+_atkname\b/, 'repeating_attack_%%RID%%_attack', a.id);
 			        createSpell(a.id);
+                    createTraits(a.id);
 			    }
 			    sendChat("TokenAction", "/w " + msg.who + " Created Token Actions for " + a.get('name') + ".");
 			});
@@ -240,6 +272,12 @@ var tokenAction = tokenAction || (function() {
 			_.each(char, function(a) {
 			    createSpell(a.id);
 			    sendChat("TokenAction", "/w " + msg.who + " Created Token Spell Action for " + a.get('name') + ".");
+            });
+        } else if (msg.type === 'api' && msg.content.search(/!traitsta\b/) !== -1 && msg.selected) {
+            char = _.uniq(getSelectedCharacters(msg.selected));
+			_.each(char, function(a) {
+                createTraits(a.id);
+                sendChat("TokenAction", "/w " + msg.who + " Created Token Traits Action for " + a.get('name') + ".");
             });
         }
 		return;
