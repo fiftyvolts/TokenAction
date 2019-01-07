@@ -1,7 +1,7 @@
 var tokenAction = tokenAction || (function() {
     'use strict';
 
-    var version = '0.2.5-forked-0.4',
+    var version = '0.2.5-forked-0.5',
         sheetVersion = '5th Edition OGL by Roll20 2.0',
         
     checkInstall = function() {
@@ -151,11 +151,13 @@ var tokenAction = tokenAction || (function() {
         sk = _.keys(sb);
         
         _.each(sk, function(e){
-            var displayLevel = e;
-            while (displayLevel.length < 17) {
-               displayLevel += '-';
+            var level = /\d+/.exec(e);
+            if (e == 'Cantrips') {
+                var displayLevel = e + '---------+------';
+            } else {
+                var displayLevel = (e + '-@{lvl' + level + '_slots_expended}/@{lvl' + level + '_slots_total}' +
+                                    '----------+------');
             }
-            displayLevel += '+------';
             spellText += "``" + displayLevel + "``\n" + sb[e].join('\n') + "\n";
         });
         
