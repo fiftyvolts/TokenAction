@@ -240,31 +240,42 @@ var tokenAction = tokenAction || (function() {
             })
             .value();
         
+	   
+        var turns = {};
         
-        if (isNpc(char.id)) {
-            var wtype = findObjs({'type': 'attribute',
-                                  'characterid': char.id,
-                                  'name': 'wtype'});
-           
-           createAndSetAttr(char, 'wtype', '/w gm', true);
-           createAndSetAttr(char, 'rtype', '{{always=1}} {{r2=[[@{d20}', true);
-           createAndSetAttr(char, 'dtype', 'full', true);
-           createAndSetAttr(char, 'npc_name_flag', '0', true);
-
-           //sendChat('character|' + char.id, '%{' + char.id + '|npc_init}', null, {noarchive:true});
-           var init_roll_ability = findObjs({'type': 'ability',
-                                              'characterId': char.id,
-                                              'name': 'npc_init'});
-           if (init_roll_ability.length > 0) {
-               sendChat('character|' + char.id, init_roll_ability[0].action, null, {noarchive:true});
-           } else {
-               sendChat('character|' + char.id, '/roll 1d20 &{tracker}', null, {noarchive:true});
-               sendChat('', 'You are out of luck!');
-           }
+	    _.each(charsAndGraphics, function(pair) {
+            var char = pair[0];
+            var graphic = pair[1];
             
-           createAndSetAttr(char, 'wtype', '', true);
-           
-        }  
+            if (isNpc(char.id)) {
+                createAndSetAttr(char, 'wtype', '', true);
+                createAndSetAttr(char, 'rtype', '{{always=1}} {{r2=[[@{d20}', true);
+                createAndSetAttr(char, 'dtype', 'full', true);
+                createAndSetAttr(char, 'npc_name_flag', '0', true);
+                
+                var init_bonus = findObjs({'type': 'attribute',
+                                           'characterid': char.id,
+                                           'name': "initiative_bonus"});
+                
+                var mod = init_bonus.length > 0 ? init_bonus[0].get('current') : 0;
+                
+                turns[graphic.id] = {
+                    id: graphic.id,
+                    pr: String((randomInteger(20) + parseFloat(mod)).toFixed(2)).replace(/\.?0+$/,""),
+                    custom: ""
+                };
+            }
+        });
+        
+        var turnorder;
+        if(Campaign().get("turnorder") == "") turnorder = [];
+        else turnorder = JSON.parse(Campaign().get("turnorder"));
+        
+        turnorder = _.filter(turnorder, function(t) { return !(t.id in turns); });
+        _.each(turns, function(t) { turnorder.push(t); });
+        
+        Campaign().set("turnorder", JSON.stringify(turnorder));
+         
     },
     createAndSetAttr = function(char, attr_name, value, is_current) {  
         var attr = findObjs({'type': 'attribute',
