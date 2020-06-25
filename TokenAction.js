@@ -224,6 +224,73 @@ var tokenAction = tokenAction || (function() {
                 }
         });
     },
+	
+        
+    npcInit = function(selected) {
+        var charsAndGraphics = _.chain(selected)
+            .map(function(s){
+                return getObj(s._type,s._id);
+            })
+            .reject(_.isUndefined)
+            .map(function(c) {
+                return [getObj('character', c.get('represents')), c];
+            })
+            .filter(function(pair) {
+                return pair[0] !== undefined;
+            })
+            .value();
+        
+        
+        if (isNpc(char.id)) {
+            var wtype = findObjs({'type': 'attribute',
+                                  'characterid': char.id,
+                                  'name': 'wtype'});
+           
+           createAndSetAttr(char, 'wtype', '/w gm', true);
+           createAndSetAttr(char, 'rtype', '{{always=1}} {{r2=[[@{d20}', true);
+           createAndSetAttr(char, 'dtype', 'full', true);
+           createAndSetAttr(char, 'npc_name_flag', '0', true);
+
+           //sendChat('character|' + char.id, '%{' + char.id + '|npc_init}', null, {noarchive:true});
+           var init_roll_ability = findObjs({'type': 'ability',
+                                              'characterId': char.id,
+                                              'name': 'npc_init'});
+           if (init_roll_ability.length > 0) {
+               sendChat('character|' + char.id, init_roll_ability[0].action, null, {noarchive:true});
+           } else {
+               sendChat('character|' + char.id, '/roll 1d20 &{tracker}', null, {noarchive:true});
+               sendChat('', 'You are out of luck!');
+           }
+            
+           createAndSetAttr(char, 'wtype', '', true);
+           
+        }  
+    },
+    createAndSetAttr = function(char, attr_name, value, is_current) {  
+        var attr = findObjs({'type': 'attribute',
+                             'characterid': char.id,
+                             'name': attr_name});
+        
+        if (attr.length == 0) {
+            var obj = {'characterid': char.id,
+                       'name': attr_name};
+            if (is_current) {
+                obj['current'] = value;
+                obj['max'] = '';
+            } else {
+                obj['current'] = '';
+                obj['max'] = value;
+            }           
+            createObj('attribute', obj);
+ 
+        } else {
+            if (is_current) {
+                attr[0].set('current', value);
+            } else {
+                attr[0].set('max', value);
+            }
+        }
+    },
     
     handleInput = function(msg) {
         var char;
@@ -281,6 +348,8 @@ var tokenAction = tokenAction || (function() {
                 createTraits(a.id);
                 sendChat("TokenAction", "/w " + msg.who + " Created Token Traits Action for " + a.get('name') + ".");
             });
+        } else if (msg.type = 'api' && msg.content.search(/!npcinit\b/) !== -1 && msg.selected) {
+            npcInit(msg.selected);
         }
 		return;
 	},
