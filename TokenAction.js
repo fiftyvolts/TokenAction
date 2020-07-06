@@ -305,7 +305,7 @@ var tokenAction = tokenAction || (function() {
 	    },
 	    
 	    prefixName = function(msg) {
-	        var parts = msg.split(/\s/);
+	        var parts = msg.content.split(/\s/);
 	        if (parts.length < 2) {
 		        return;
 	        }
@@ -314,11 +314,15 @@ var tokenAction = tokenAction || (function() {
 
 	        var chars = _.uniq(getSelectedCharacters(msg.selected));
 	        _.each(chars, function(char) {
-		        if (isNpc(char)) {
-		            createAndSetAttr(char, 'npc_name', prefix + ' ' + char.get('npc_name'), true);
+                var id = char.id;
+		        if (isNpc(id)) {
+                    var attr = 'npc_name';
 		        } else {
-		            createAndSetAttr(char, 'name', prefix + ' ' + char.get('name'), true);
+                    var attr = 'name';
 		        }
+                
+                var name = getAttrByName(id, attr, '');
+                createAndSetAttr(char, attr, prefix + ' ' + name, true);
 	        });
 	    },
 	    
