@@ -225,22 +225,23 @@ var tokenAction = tokenAction || (function() {
             });
 	    },
 	    
+        getCharsAndGraphics = function(selected) {
+            return (_.chain(selected)
+		            .map(function(s){
+                        return getObj(s._type,s._id);
+		            })
+		            .reject(_.isUndefined)
+		            .map(function(c) {
+                        return [getObj('character', c.get('represents')), c];
+		            })
+		            .filter(function(pair) {
+                        return pair[0] !== undefined;
+		            })
+		            .value());
+        },
         
 	    npcInit = function(selected) {
-            var charsAndGraphics = _.chain(selected)
-		        .map(function(s){
-                    return getObj(s._type,s._id);
-		        })
-		        .reject(_.isUndefined)
-		        .map(function(c) {
-                    return [getObj('character', c.get('represents')), c];
-		        })
-		        .filter(function(pair) {
-                    return pair[0] !== undefined;
-		        })
-		        .value();
-            
-	        
+            var charsAndGraphics = getCharsAndGraphics(selected);
             var turns = {};
             
 	        _.each(charsAndGraphics, function(pair) {
@@ -311,10 +312,12 @@ var tokenAction = tokenAction || (function() {
 	        }
 
 	        var prefix = parts[1];
-
-	        var chars = _.uniq(getSelectedCharacters(msg.selected));
-	        _.each(chars, function(char) {
+            var pairs =  getCharsAndGraphics(selected);
+	        _.each(pairs, function(pair) {
+                var char = pair[0];
                 var id = char.id;
+                var graphic = pair[1];
+                
 		        if (isNpc(id)) {
                     var attr = 'npc_name';
 		        } else {
@@ -322,7 +325,11 @@ var tokenAction = tokenAction || (function() {
 		        }
                 
                 var name = getAttrByName(id, attr, '');
+
                 createAndSetAttr(char, attr, prefix + ' ' + name, true);
+                char.set('name', name);
+                graphic.set('name', name);
+                setDefaultTokenForCharacter(char, graphic);
 	        });
 	    },
 	    
