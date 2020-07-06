@@ -312,7 +312,8 @@ var tokenAction = tokenAction || (function() {
 	        }
 
 	        var prefix = parts[1];
-            var pairs =  getCharsAndGraphics(selected);
+            var pairs =  getCharsAndGraphics(msg.selected);
+            
 	        _.each(pairs, function(pair) {
                 var char = pair[0];
                 var id = char.id;
