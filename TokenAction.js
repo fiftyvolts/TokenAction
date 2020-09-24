@@ -322,7 +322,7 @@ var tokenAction = tokenAction || (function() {
 		        if (isNpc(id)) {
                     var attr = 'npc_name';
 		        } else {
-                    var attr = 'name';
+                    var attr = 'character_name';
 		        }
                 
                 var name = getAttrByName(id, attr, '');
@@ -334,6 +334,24 @@ var tokenAction = tokenAction || (function() {
 	        });
 	    },
 	    
+        prepForExport = function(selected) {
+            _.each(selected, function(char) {
+                var id = char.id;
+                var name = isNpc(id) ? getAttrByName(id, 'npc_name') :
+                    getAttrByName(id, 'character_name');
+
+                char.set('inplayerjournals', 'all');
+                char.set('controlledby', 'all');
+                
+                var abilities = findObjs({type: 'ability', _characterid: id});
+                _.each(abilities, function(ability) {
+                    var action = ability.get('action');
+                    var updated = action.split(id).join(name);
+                    ability.set('action', updated);
+                });
+            });
+        },
+    
 	    handleInput = function(msg) {
             var char;
             
@@ -394,7 +412,10 @@ var tokenAction = tokenAction || (function() {
 		        npcInit(msg.selected);
             } else if (msg.type = 'api' && msg.content.search(/!nameprefix\b/) !== -1 && msg.selected) {
 		        prefixName(msg);
-	        }
+	        } else if (msg.type = 'api' && msg.content.search(/!prepforexport\b/) !== -1 && msg.selected) {
+		        var chars = _.uniq(getSelectedCharacters(msg.selected));
+                prepForExport(chars);
+            }
 	        return;
 	    },
 
